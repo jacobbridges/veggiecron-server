@@ -1,2 +1,7 @@
 # veggiecron-server
-A healthier alternative to cron 
+
+A healthier alternative to cron.
+
+# Meta
+
+* Requires: Python 3.5+

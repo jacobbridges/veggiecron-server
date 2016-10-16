@@ -76,8 +76,7 @@ class JobScheduler(Thread):
                 # Calculate the job's next run time
                 if job.last_ran is None:
                     job.last_ran = now().timestamp()
-                else:
-                    job.last_ran = job.last_ran
+
                 next_run = parse(job.schedule, job.last_ran)
 
                 # Get the appropriate job runner
@@ -87,12 +86,10 @@ class JobScheduler(Thread):
                 # Schedule the job to run
                 if next_run <= now():
                     self << 'Job "{}" is behind schedule! Running now!'.format(job.name)
-                    job.last_ran = now().timestamp()
                     asyncio.ensure_future(job_runner.run(job, 0))
                 else:
                     seconds = next_run.timestamp() - now().timestamp()
                     self << 'Scheduling job "{}" to run in {} seconds'.format(job.name, seconds)
-                    job.last_ran = next_run.timestamp()
                     asyncio.ensure_future(job_runner.run(job, seconds))
 
                 # Job has been scheduled, move on to scheduling the next job

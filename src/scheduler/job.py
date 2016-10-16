@@ -23,3 +23,8 @@ class Job(object):
         self.last_ran = float(last_ran) if last_ran is not None else None
         self.date_created = date_created
         self.date_updated = date_updated
+
+        if isinstance(self.schedule, str) and self.schedule.startswith('once'):
+            self.run_once = True
+        else:
+            self.run_once = False

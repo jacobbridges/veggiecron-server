@@ -1,5 +1,5 @@
 """
-src/routes/index.py
+src/routes/job.py
 
 Job "/job" route for all HTTP methods.
 """
@@ -9,7 +9,7 @@ import json
 from tornado.web import HTTPError
 
 from ._base import BasePageHandler
-from ..job_scheduler import Job
+from ..scheduler import Job
 from ..utils.dates import utc_to_date, now
 
 

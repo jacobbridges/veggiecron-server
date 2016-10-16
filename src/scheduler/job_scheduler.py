@@ -1,5 +1,5 @@
 """
-src/job_scheduler.py
+src/scheduler/job_scheduler.py
 
 Code related to running jobs, scheduling jobs, etc.
 """
@@ -12,9 +12,10 @@ from threading import Thread
 from tornado.httpclient import AsyncHTTPClient
 from tornado.platform.asyncio import to_asyncio_future
 
-from .database import DB
-from .utils.dates import now
-from .schedule_parser import parse
+from .job import Job
+from ..database import DB
+from ..utils.dates import now
+from ..scheduler import parse
 
 
 class JobScheduler(Thread):
@@ -120,21 +121,3 @@ class JobScheduler(Thread):
         """Helper function for printing a message."""
         msg = '[JobScheduler] ' + msg
         print(msg)
-
-
-class Job(object):
-    """Wrapper around a job, providing convenience functions and typing."""
-
-    def __init__(self, id_=None, user_id=None, name=None, type_id=None, data=None, schedule=None,
-                 done=None, last_ran=None, date_created=None, date_updated=None):
-        """Constructor."""
-        self.id = id_
-        self.user_id = user_id
-        self.name = name
-        self.type_id = type_id
-        self.data = json.loads(data)
-        self.schedule = schedule
-        self.done = done
-        self.last_ran = last_ran
-        self.date_created = date_created
-        self.date_updated = date_updated

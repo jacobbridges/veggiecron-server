@@ -147,3 +147,8 @@ fabric.properties
 
 ## Ignore sqlite3 databases
 *.db
+
+## Ignore some of my scratch files ##
+seed.py
+server-asyncio.py
+server-callback.py

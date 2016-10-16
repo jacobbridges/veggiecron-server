@@ -1,12 +1,12 @@
 """
-/schedule_parser.py
+src/scheduler/parser.py
 
 Parse job schedule strings into date of next job execution.
 """
 
 from datetime import timedelta
 
-from .utils.dates import utc_to_date
+from ..utils.dates import utc_to_date
 
 
 schedule_string_syntax = """

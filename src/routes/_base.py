@@ -6,7 +6,7 @@ Base route for which all other routes should inherit from.
 
 from tornado.web import RequestHandler
 
-from ..job_scheduler import JobScheduler
+from ..scheduler import JobScheduler
 
 
 class BasePageHandler(RequestHandler):

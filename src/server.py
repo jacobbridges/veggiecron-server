@@ -17,7 +17,7 @@ from .database import DB
 from .routes import IndexPageHandler, RegisterPageHandler, LoginPageHandler, JobPageHandler
 from .utils import ConfigParser
 from .utils.dates import now
-from .job_scheduler import JobScheduler
+from .scheduler import JobScheduler
 
 
 class ServerApp(TornadoApplication):

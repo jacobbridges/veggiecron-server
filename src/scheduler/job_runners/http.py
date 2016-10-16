@@ -48,24 +48,38 @@ class HTTPJobRunner(AbstractJobRunner):
         if delay > 0:
             await asyncio.sleep(delay)
 
-        # Update the last_ran time for this job
-        await self.db.execute('UPDATE job SET last_ran = ? WHERE id = ?', job.last_ran, job.id)
-
         # "Queue up" x HTTP requests, where x is the job's "number_of_clones"
         job_future = asyncio.gather(*[self.handle_request(job)
                                       for _ in range(job.data['number_of_clones'])])
 
-        # Run the job and depending on the "enable_shadows" option either queue the job right
-        # away or after the job finishes running
-        if job.data['enable_shadows'] is True:
+        # Create an async function for running the job with shadows disabled
+        async def run_with_shadows():
             asyncio.ensure_future(job_future)
-            await self.scheduler_queue.put(job)
-        else:
-            async def f():
-                await job_future
+            job.last_ran = now(as_utc=True)
+            await self.db.execute('UPDATE job SET last_ran = ? WHERE id = ?', job.last_ran, job.id)
+            if job.run_once is False:
                 await self.scheduler_queue.put(job)
+            else:
+                asyncio.ensure_future(self.db.execute('UPDATE job SET done = 1 WHERE id = ?',
+                                                      job.id))
 
-            asyncio.ensure_future(f())
+        # Create an async function for running the job with shadows enabled
+        async def run_without_shadows():
+            await job_future
+            job.last_ran = now(as_utc=True)
+            await self.db.execute('UPDATE job SET last_ran = ? WHERE id = ?', job.last_ran, job.id)
+            if job.run_once is False:
+                await self.scheduler_queue.put(job)
+            else:
+                asyncio.ensure_future(self.db.execute('UPDATE job SET done = 1 WHERE id = ?',
+                                                      job.id))
+
+        # Run the job and depending on the "enable_shadows" option either queue the job right away
+        # or after the job finishes running
+        if job.data['enable_shadows'] is True:
+            asyncio.ensure_future(run_with_shadows())
+        else:
+            asyncio.ensure_future(run_without_shadows())
 
     async def handle_request(self, job):
         response = await to_asyncio_future(self.http_client.fetch(job.data['url'],

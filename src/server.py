@@ -73,7 +73,6 @@ class ServerApp(TornadoApplication):
     async def setup_db(self):
         """Create database schema if database is empty."""
         tables = await self.db.execute("SELECT name FROM sqlite_master WHERE type='table';")
-        print(tables)
         if len(tables) is 0:
             print('No tables found in database. Generating schema..')
             schema_sql = open('src/database/sql/schema.sql', 'r').read()

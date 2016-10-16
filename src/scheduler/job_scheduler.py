@@ -73,10 +73,11 @@ class JobScheduler(Thread):
                 if job is False:
                     break
 
-                # Calculate the job's next run time
+                # If the job doesn't have a last_ran time, use the date_created time
                 if job.last_ran is None:
-                    job.last_ran = now().timestamp()
+                    job.last_ran = job.date_created
 
+                # Calculate the job's next run time
                 next_run = parse(job.schedule, job.last_ran)
 
                 # Get the appropriate job runner

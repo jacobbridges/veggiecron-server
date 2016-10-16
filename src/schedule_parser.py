@@ -4,9 +4,9 @@
 Parse job schedule strings into date of next job execution.
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
-from util import utc_to_date
+from .utils.dates import utc_to_date
 
 
 schedule_string_syntax = """
@@ -17,7 +17,7 @@ Schedule string must be one of the following formats:
   * "every 10 seconds"
   * "every day @ 13:00"
   * "every 30 days @ 7:30"
-  * "once @ <iso-timestamp>" """
+  * "once @ <utc-timestamp>" """
 
 
 class ParseError(ValueError):
@@ -91,7 +91,7 @@ def parse(schedule_string: str, last_ran: float):
             raise ParseError(schedule_string_syntax)
 
         try:
-            time_to_run = utc_to_date(pieces[2])
+            time_to_run = utc_to_date(float(pieces[2]))
         except ValueError:
             raise ParseError(schedule_string_syntax)
 

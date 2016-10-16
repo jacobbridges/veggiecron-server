@@ -1,7 +1,7 @@
 app:
   env: development
   name: veggiecron-server
-  host: 0.0.0.0
-  port: 8118
   key: jeho92ehfiu3be7fqf2o4uoqxfgiuegofq87egfqxyg
+host: 0.0.0.0
+port: 8118
 db_file: sqlite3.db

@@ -4,7 +4,6 @@ src/scheduler/job_scheduler.py
 Code related to running jobs, scheduling jobs, etc.
 """
 
-import json
 import asyncio
 
 from asyncio import Queue
@@ -13,9 +12,10 @@ from tornado.httpclient import AsyncHTTPClient
 from tornado.platform.asyncio import to_asyncio_future
 
 from .job import Job
+from .job_runners import AbstractJobRunner, HTTPJobRunner
 from ..database import DB
 from ..utils.dates import now
-from ..scheduler import parse
+from .parser import parse
 
 
 class JobScheduler(Thread):
@@ -33,6 +33,9 @@ class JobScheduler(Thread):
         # Bind the event loop to the thread
         self.event_loop = event_loop
 
+        # Prepare all job runners
+        HTTPJobRunner.load_class(db, work_queue)
+
         # Call the parent (Thread) constructor
         super().__init__()
 
@@ -43,34 +46,6 @@ class JobScheduler(Thread):
 
         # Create the event loop
         asyncio.set_event_loop(self.event_loop)
-
-        async def handle_request(client, url, verb, job_id):
-            try:
-                response = await to_asyncio_future(client.fetch(url, method=verb))
-                data = {'code': response.code, 'body': response.body.decode('utf8')}
-                future = self.db.execute('INSERT INTO job_result (job_id, result, date_created) '
-                                         'VALUES (?, ?, ?)', job_id, json.dumps(data),
-                                         now(as_utc=True))
-                asyncio.ensure_future(future)
-            except Exception as e:
-                self << 'Failed to {} {} (ERROR: "{}")'.format(verb, url, str(e))
-
-        async def run_job(job, delay, http_client):
-            if delay > 0:
-                await asyncio.sleep(delay)
-            url, concurrency, verb = job.data['url'], job.data['number_of_clones'], job.data['verb']
-            await self.db.execute('UPDATE job SET last_ran = ? WHERE id = ?',
-                                  job.last_ran, job.id)
-            job_future = asyncio.gather(*[handle_request(http_client, u, verb, job.id)
-                                          for u in [url] * concurrency])
-            if job.data['enable_shadows'] is True:
-                asyncio.ensure_future(job_future)
-                await self.work_queue.put(job)
-            else:
-                async def f():
-                    await job_future
-                    await self.work_queue.put(job)
-                asyncio.ensure_future(f())
 
         async def main():
 
@@ -84,38 +59,46 @@ class JobScheduler(Thread):
             for row in query_result:
                 await self.work_queue.put(Job(*row))
 
+            # Create a mapping of job types to job runners
+            job_runners = {
+                1: HTTPJobRunner(),
+            }
+
             # Process jobs from the work queue
             while True:
-                ":type: Job"
                 job = await self.work_queue.get()
+                ":type: Job"
 
                 # If "False" is sent to the work queue, end the thread
                 if job is False:
                     break
 
-                # Process the job
+                # Calculate the job's next run time
                 if job.last_ran is None:
                     job.last_ran = now().timestamp()
                 else:
-                    job.last_ran = float(job.last_ran)
+                    job.last_ran = job.last_ran
                 next_run = parse(job.schedule, job.last_ran)
 
+                # Get the appropriate job runner
+                job_runner = job_runners.get(job.type_id)
+                ":type: AbstractJobRunner"
+
+                # Schedule the job to run
                 if next_run <= now():
                     self << 'Job "{}" is behind schedule! Running now!'.format(job.name)
                     job.last_ran = now().timestamp()
-                    asyncio.ensure_future(run_job(job, 0, http_client))
+                    asyncio.ensure_future(job_runner.run(job, 0))
                 else:
                     seconds = next_run.timestamp() - now().timestamp()
                     self << 'Scheduling job "{}" to run in {} seconds'.format(job.name, seconds)
                     job.last_ran = next_run.timestamp()
-                    asyncio.ensure_future(run_job(job, seconds, http_client))
+                    asyncio.ensure_future(job_runner.run(job, seconds))
+
+                # Job has been scheduled, move on to scheduling the next job
                 self.work_queue.task_done()
 
         asyncio.ensure_future(to_asyncio_future(main()))
-
-    async def schedule_job(self, job):
-        """Schedule a job to be processed."""
-        return await self.work_queue.put(job)
 
     def __lshift__(self, msg):
         """Helper function for printing a message."""

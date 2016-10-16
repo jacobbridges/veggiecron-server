@@ -20,6 +20,6 @@ class Job(object):
         self.data = json.loads(data)
         self.schedule = schedule
         self.done = done
-        self.last_ran = last_ran
+        self.last_ran = float(last_ran) if last_ran is not None else None
         self.date_created = date_created
         self.date_updated = date_updated

@@ -1,20 +1,20 @@
 """
-/job_scheduler.py
+src/job_scheduler.py
 
 Code related to running jobs, scheduling jobs, etc.
 """
 
-import asyncio
 import json
+import asyncio
 
 from asyncio import Queue
 from threading import Thread
 from tornado.httpclient import AsyncHTTPClient
 from tornado.platform.asyncio import to_asyncio_future
 
-from util import now, now_as_utc
-from database import DB
-from schedule_parser import parse
+from .database import DB
+from .utils.dates import now
+from .schedule_parser import parse
 
 
 class JobScheduler(Thread):
@@ -46,10 +46,10 @@ class JobScheduler(Thread):
         async def handle_request(client, url, verb, job_id):
             try:
                 response = await to_asyncio_future(client.fetch(url, method=verb))
-                # TODO: Save the response somewhere (for future retrieval)
                 data = {'code': response.code, 'body': response.body.decode('utf8')}
                 future = self.db.execute('INSERT INTO job_result (job_id, result, date_created) '
-                                         'VALUES (?, ?, ?)', job_id, json.dumps(data), now_as_utc())
+                                         'VALUES (?, ?, ?)', job_id, json.dumps(data),
+                                         now(as_utc=True))
                 asyncio.ensure_future(future)
             except Exception as e:
                 self << 'Failed to {} {} (ERROR: "{}")'.format(verb, url, str(e))

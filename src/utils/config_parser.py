@@ -1,8 +1,8 @@
 """
 src/utils/config_parser.py
 
-The application configurations are in a YAML file in the top directory of the project. This file
-is for utilities associated with that config file.
+This file is for utilities associated with a YAML config file containing the application
+configurations.
 """
 
 import os
@@ -37,6 +37,6 @@ class ConfigParser(object):
         self.app_env = server_config['app']['env']
         self.app_name = server_config['app']['name']
         self.app_key = server_config['app']['key']
-        self.host = server_config['key']
+        self.host = server_config['host']
         self.port = server_config['port']
         self.db_file = server_config['db_file']

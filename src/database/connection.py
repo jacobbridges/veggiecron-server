@@ -1,8 +1,10 @@
 """
-/database.py
+src/database/connection.py
 
-One thread to handle all calls to the database.
-NOTE: I tried to get aioodbc working on my mac, but it was giving me too much hell.
+One thread to handle all calls to the database. (and in the darkness bind them)
+
+NOTE: I tried to get aioodbc working on my mac, but it was giving me too much hell. Would have been
+      a much more elegant solution in my mind.
 """
 
 import asyncio
@@ -10,7 +12,7 @@ import sqlite3
 
 from concurrent.futures import ThreadPoolExecutor
 
-from util import utc_to_date, compare_utc_dates, now_as_utc
+from ..utils.dates import now, utc_to_date, compare_utc_dates
 
 
 class DB(object):
@@ -26,6 +28,8 @@ class DB(object):
 
     def register_functions(self):
         """Register some utility functions to the database."""
+        def now_as_utc():
+            return now(as_utc=True)
         self.db.create_function('now_as_utc', 0, now_as_utc)
         self.db.create_function('utc_to_date', 1, utc_to_date)
         self.db.create_function('compare_utc_dates', 3, compare_utc_dates)

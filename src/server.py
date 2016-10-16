@@ -11,15 +11,19 @@ import asyncio
 import hashlib
 
 from tornado.web import Application as TornadoApplication, HTTPError
+from tornado.httpserver import HTTPServer
 
+from .database import DB
 from .routes import IndexPageHandler, RegisterPageHandler, LoginPageHandler, JobPageHandler
 from .utils import ConfigParser
+from .utils.dates import now
+from .job_scheduler import JobScheduler
 
 
 class ServerApp(TornadoApplication):
     """Tornado server which maps routes to handlers and provides common resources to handlers."""
 
-    def __init__(self, loop):
+    def __init__(self, loop: asyncio.AbstractEventLoop):
         """ Constructor."""
 
         # Map routes to handlers
@@ -54,12 +58,17 @@ class ServerApp(TornadoApplication):
         super().__init__(routes_to_handlers, **settings)
 
         # Initiate a shared connection to the database
-        self.db = DB(server_config['db_file'])
+        self.db = DB(server_config.db_file)
 
         # Initiate a threaded job scheduler
 
         work_queue = asyncio.Queue()
         self.scheduler = JobScheduler(work_queue, self.db, loop)
+
+    def run(self):
+        """Start the tornado server."""
+        http_server = HTTPServer(self)
+        http_server.listen(self.settings['app_port'])
 
     async def setup_db(self):
         """Create database schema if database is empty."""
@@ -67,7 +76,7 @@ class ServerApp(TornadoApplication):
         print(tables)
         if len(tables) is 0:
             print('No tables found in database. Generating schema..')
-            schema_sql = open('schema.sql', 'r').read()
+            schema_sql = open('src/database/sql/schema.sql', 'r').read()
             await self.db.executescript(schema_sql)
             print('Schema generated successfully.')
         self.scheduler.start()

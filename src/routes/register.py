@@ -10,6 +10,7 @@ import hashlib
 from tornado.web import HTTPError
 
 from ._base import BasePageHandler
+from ..utils.dates import now
 
 
 class RegisterPageHandler(BasePageHandler):

@@ -24,7 +24,7 @@ class HTTPJobRunner(AbstractJobRunner):
 
     # Maximum number of open requests at any given time
     # NOTE: if this number is too large, it will hold up the event loop.
-    max_open_requests = 50
+    max_open_requests = 200
 
     @classmethod
     def load_class(cls, db: DB, scheduler_queue: asyncio.Queue):

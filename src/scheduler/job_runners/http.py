@@ -82,10 +82,15 @@ class HTTPJobRunner(AbstractJobRunner):
             asyncio.ensure_future(run_without_shadows())
 
     async def handle_request(self, job):
-        response = await to_asyncio_future(self.http_client.fetch(job.data['url'],
-                                                                  method=job.data['verb']))
-        result = json.dumps({'code': response.code, 'body': response.body.decode('utf8')})
-        asyncio.ensure_future(self.persist_job_run(job, result))
+        try:
+            response = await to_asyncio_future(self.http_client.fetch(job.data['url'],
+                                                                      method=job.data['verb']))
+            result = json.dumps({'code': response.code, 'body': response.body.decode('utf8')})
+            asyncio.ensure_future(self.persist_job_run(job, result))
+        except Exception as e:
+            asyncio.ensure_future(
+                self.persist_job_run(job, json.dumps({'code': 0, 'body': str(e)}))
+            )
 
     async def persist_job_run(self, job, result):
         """Persist the results of a job."""

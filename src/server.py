@@ -11,6 +11,7 @@ import asyncio
 import hashlib
 
 from tornado.web import Application as TornadoApplication, HTTPError
+from tornado.log import enable_pretty_logging
 from tornado.httpserver import HTTPServer
 
 from .database import DB
@@ -25,6 +26,8 @@ class ServerApp(TornadoApplication):
 
     def __init__(self, loop: asyncio.AbstractEventLoop):
         """ Constructor."""
+
+        enable_pretty_logging()
 
         # Map routes to handlers
         routes_to_handlers = [

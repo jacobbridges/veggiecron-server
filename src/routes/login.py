@@ -4,7 +4,6 @@ src/routes/login.py
 Login "/login" route for all HTTP methods.
 """
 
-import json
 import hashlib
 
 from tornado.web import HTTPError
@@ -16,12 +15,12 @@ class LoginPageHandler(BasePageHandler):
     """Page handler for login ('/login') route."""
 
     def get(self):
-        self.write(json.dumps({
+        self.write({
             'id': 'success',
             'description': 'Send a POST request to this endpoint with a "username" and "password"'
                            'arguments to retrieve an auth token.',
             'data': {}
-        }))
+        })
 
     async def post(self):
         # Check all post arguments were supplied
@@ -43,12 +42,12 @@ class LoginPageHandler(BasePageHandler):
         # Check the password against the hashed password
         if user[2] == hashlib.sha256(bytes(password, encoding='utf8')).hexdigest():
             token = await self.application.generate_auth_token(user[0])
-            return self.write(json.dumps({
+            return self.write({
                 'id': 'success',
                 'description': 'You have successfully generated an auth token! Check the data key.',
                 'data': {
                     'token': token
                 }
-            }))
+            })
         else:
             raise HTTPError(401, 'Incorrect password!')

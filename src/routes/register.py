@@ -4,7 +4,6 @@ src/routes/register.py
 Register "/register" route for all HTTP methods.
 """
 
-import json
 import hashlib
 
 from tornado.web import HTTPError
@@ -17,12 +16,12 @@ class RegisterPageHandler(BasePageHandler):
     """Page handler for register ('/register') route."""
 
     def get(self):
-        self.write(json.dumps({
+        self.write({
             'id': 'success',
             'description': 'Send a POST request to this endpoint with a "username" and "password" '
                            'argument to register a user.',
             'data': {},
-        }))
+        })
 
     async def post(self):
         # Check all post arguments were supplied
@@ -46,7 +45,7 @@ class RegisterPageHandler(BasePageHandler):
         await self.db.execute("INSERT INTO user (id, username, password, date_created, "
                               "date_updated) VALUES (NULL, ?, ?, ?, ?);", username, password,
                               time_now, time_now)
-        self.write(json.dumps({
+        self.write({
             'id': 'success',
             'description': 'You are registered as "{}"! Proceed to login.'.format(username),
             'data': {
@@ -54,4 +53,4 @@ class RegisterPageHandler(BasePageHandler):
                 'date_created': time_now,
                 'date_updated': time_now,
             }
-        }))
+        })

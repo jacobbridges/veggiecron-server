@@ -4,8 +4,6 @@ src/routes/job.py
 Job "/job" route for all HTTP methods.
 """
 
-import json
-
 from tornado.web import HTTPError
 
 from ._base import BasePageHandler
@@ -27,7 +25,7 @@ class JobPageHandler(BasePageHandler):
             jobs = await self.db.execute("SELECT * FROM job WHERE user_id = ?;", user_id)
             job_types = await self.db.execute("SELECT id, name FROM job_type;")
             job_types = {k: v for k, v in job_types}
-            return self.write(json.dumps({
+            return self.write({
                 'id': 'success',
                 'description': 'List all jobs for the given user.',
                 'data': {
@@ -42,7 +40,7 @@ class JobPageHandler(BasePageHandler):
                         } for j in jobs
                     ],
                 }
-            }))
+            })
 
         else:
 
@@ -60,7 +58,7 @@ class JobPageHandler(BasePageHandler):
                                                 "WHERE job_id = ? ORDER BY id DESC LIMIT 25",
                                                 job[0])
 
-            return self.write(json.dumps({
+            return self.write({
                 'id': 'success',
                 'description': 'Information for job "{}"'.format(job_name),
                 'data': {
@@ -75,7 +73,7 @@ class JobPageHandler(BasePageHandler):
                     'job_runs': [{'result': r[1], 'timestamp': utc_to_date(float(r[2])).isoformat()}
                                  for r in job_results]
                 }
-            }))
+            })
 
     async def post(self):
         # Check for auth token
@@ -105,7 +103,7 @@ class JobPageHandler(BasePageHandler):
             job = job[0]
             job_obj = Job(*job)
             await self.scheduler.work_queue.put(job_obj)
-            return self.write(json.dumps({
+            return self.write({
                 'id': 'success',
                 'description': 'Successfully created {0} job: "{1}"'.format(job_type, job_name),
                 'data': {
@@ -116,6 +114,6 @@ class JobPageHandler(BasePageHandler):
                     'date_created': time_now,
                     'date_updated': time_now,
                 }
-            }))
+            })
         else:
             raise HTTPError(400, 'Job type "{}" does not exist.'.format(job_type))

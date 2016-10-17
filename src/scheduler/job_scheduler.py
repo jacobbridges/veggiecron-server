@@ -75,7 +75,7 @@ class JobScheduler(Thread):
 
                 # If the job doesn't have a last_ran time, use the date_created time
                 if job.last_ran is None:
-                    job.last_ran = job.date_created
+                    job.last_ran = float(job.date_created)
 
                 # Calculate the job's next run time
                 next_run = parse(job.schedule, job.last_ran)
@@ -90,7 +90,7 @@ class JobScheduler(Thread):
                     asyncio.ensure_future(job_runner.run(job, 0))
                 else:
                     seconds = next_run.timestamp() - now().timestamp()
-                    self << 'Scheduling job "{}" to run in {} seconds'.format(job.name, seconds)
+                    self << 'Scheduling job "{}" to run in {:.2f} seconds'.format(job.name, seconds)
                     asyncio.ensure_future(job_runner.run(job, seconds))
 
                 # Job has been scheduled, move on to scheduling the next job

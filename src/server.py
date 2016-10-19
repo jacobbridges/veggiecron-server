@@ -64,7 +64,6 @@ class ServerApp(TornadoApplication):
         self.db = DB(server_config.db_file)
 
         # Initiate a threaded job scheduler
-
         work_queue = asyncio.Queue()
         self.scheduler = JobScheduler(work_queue, self.db, loop)
 

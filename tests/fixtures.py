@@ -8,14 +8,17 @@ from unittest import mock
 
 
 def create_db_fixture():
+    """Return a mocked src.database.DB object."""
     return mock.MagicMock()
 
 
 def create_job_scheduler_fixture():
+    """Return a mocked src.scheduler.JobScheduler object."""
     return mock.MagicMock()
 
 
 def create_config_parser_fixture():
+    """Return a mocked src.utils.ConfigParser object."""
     fixture = mock.MagicMock()
     fixture.app_env = 'development'
     fixture.app_name = 'veggiecron-server'

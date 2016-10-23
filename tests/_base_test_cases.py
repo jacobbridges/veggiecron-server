@@ -1,9 +1,8 @@
 """
-tests/server.py
+tests/_base_test_cases.py
 
-Test the server object. I will not be testing all methods of the server since the server a child
-of tornado.web.Application and the tornado project is tested, I am only testing the custom logic
-that was added in this project.
+For the creation of more modular tests, I have decided to create custom TestCase classes which can
+be implemented by other test files.
 """
 
 import tornado.platform.asyncio
@@ -15,8 +14,8 @@ from tests.fixtures import (create_db_fixture, create_job_scheduler_fixture,
                             create_config_parser_fixture)
 
 
-class TestServer(tornado.testing.AsyncHTTPTestCase):
-    """Start a test instance of the server."""
+class MyServerTestCase(tornado.testing.AsyncHTTPTestCase):
+    """Tornado server"""
 
     def get_new_ioloop(self):
         """Overwrite the base IOLoop with the asyncio loop."""
@@ -29,10 +28,3 @@ class TestServer(tornado.testing.AsyncHTTPTestCase):
         """Return a mocked version of the veggiecron server."""
         app = ServerApp(self.io_loop)
         return app
-
-    def test_index(self):
-        """Test the index route of the server."""
-        response = self.fetch('/')
-        config = create_config_parser_fixture()
-        self.assertEqual(response.code, 200)
-        self.assertIn(config.app_name, str(response.body))

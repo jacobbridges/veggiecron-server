@@ -11,15 +11,15 @@ from tests._base_test_cases import MyServerTestCase
 from tests.fixtures import create_config_parser_fixture
 
 
-class TestServerIndexPage(MyServerTestCase):
-    """Base route '/'"""
+class TestGetIndexPage(MyServerTestCase):
+    """GET base route '/'"""
 
-    def test_index_response_code(self):
+    def test_response_code(self):
         """Should have an HTTP response code of 200."""
         response = self.fetch('/')
         self.assertEqual(response.code, 200)
 
-    def test_index_is_json(self):
+    def test_response_is_json(self):
         """Should have JSON encoded body."""
         response = self.fetch('/')
         from json import loads
@@ -28,7 +28,7 @@ class TestServerIndexPage(MyServerTestCase):
         except ValueError:
             pytest.fail('Response body was not JSON encoded.')
 
-    def test_index_has_app_name(self):
+    def test_response_has_app_name(self):
         """Should have the application name in the body."""
         response = self.fetch('/')
         config = create_config_parser_fixture()

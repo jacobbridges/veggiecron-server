@@ -15,12 +15,26 @@ from ..utils.dates import now
 class RegisterPageHandler(BasePageHandler):
     """Page handler for register ('/register') route."""
 
+    get_description = 'Send a POST request to /register to create a user. Check "data" which ' \
+                      'arguments need to be sent with the request.'
+    post_args = {
+        'username': {
+            'description': 'Your username must be an alphanumeric string.',
+            'type': 'text',
+            'required': True,
+        },
+        'password': {
+            'description': 'Your password is not saved to the server.',
+            'type': 'text',
+            'required': True,
+        }
+    }
+
     def get(self):
         self.write({
             'id': 'success',
-            'description': 'Send a POST request to this endpoint with a "username" and "password" '
-                           'argument to register a user.',
-            'data': {},
+            'description': self.get_description,
+            'data': self.post_args,
         })
 
     async def post(self):

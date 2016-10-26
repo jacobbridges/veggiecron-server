@@ -6,7 +6,7 @@ Register "/register" route for all HTTP methods.
 
 import hashlib
 
-from tornado.web import HTTPError
+from tornado.web import HTTPError, MissingArgumentError
 
 from ._base import BasePageHandler
 from ..utils.dates import now
@@ -41,8 +41,12 @@ class RegisterPageHandler(BasePageHandler):
         # Check all post arguments were supplied
         username = self.get_argument('username', None)
         password = self.get_argument('password', None)
-        if any([username is None, password is None]):
-            raise HTTPError(400, 'Both username and password are required to register.')
+        if all([username is None, password is None]):
+            raise MissingArgumentError('Username and Password')
+        if username is None:
+            raise MissingArgumentError('Username')
+        if password is None:
+            raise MissingArgumentError('Password')
 
         # Check that the username is an alphanumeric string
         if not str.isalnum(username):

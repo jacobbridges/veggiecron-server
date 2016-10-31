@@ -27,3 +27,12 @@ def create_config_parser_fixture():
     fixture.port = '8118'
     fixture.db_file = 'sqlite3.db'
     return fixture
+
+
+def create_hashlib_fixture(return_value=None):
+    """Return a mocked hashlib object."""
+    fixture = mock.MagicMock()
+    deep_fixture = mock.MagicMock()
+    deep_fixture.hexdigest = lambda: return_value
+    fixture.sha256 = mock.MagicMock(return_value=deep_fixture)
+    return fixture

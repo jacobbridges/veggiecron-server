@@ -18,7 +18,7 @@ from tests._base_test_cases import MyServerTestCase
 
 
 class TestGetRegisterPage(MyServerTestCase):
-    """GET register route '/register'"""
+    """GET '/register'"""
 
     def test_response_code(self):
         """Should have an HTTP response code of 200."""
@@ -50,7 +50,7 @@ class TestGetRegisterPage(MyServerTestCase):
 
 
 class TestPostRegisterPage(MyServerTestCase):
-    """POST register route '/register'"""
+    """POST '/register'"""
 
     @tornado.testing.gen_test
     def test_no_arg_response_code(self):

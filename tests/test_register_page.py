@@ -70,7 +70,7 @@ class TestPostRegisterPage(MyServerTestCase):
         self.assertIn('Both username and password are required to register.', str(error_info.value))
 
     @tornado.testing.gen_test
-    def test_missing_arg_response_code(self):
+    def test_missing_username_response_code(self):
         """Should have an HTTP response code of 400 when "username" is missing."""
 
         # Test when "username" arg is missing.
@@ -79,6 +79,10 @@ class TestPostRegisterPage(MyServerTestCase):
         with pytest.raises(tornado.httpclient.HTTPError) as error_info:
             yield future
         self.assertEqual(error_info.value.code, 400)
+
+    @tornado.testing.gen_test
+    def test_missing_password_response_code(self):
+        """Should have an HTTP response code of 400 when "password" is missing."""
 
         # Test when "password" arg is missing.
         future = self.http_client.fetch(self.get_url('/register'), method='POST',

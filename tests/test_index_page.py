@@ -12,7 +12,7 @@ from tests.fixtures import create_config_parser_fixture
 
 
 class TestGetIndexPage(MyServerTestCase):
-    """GET base route '/'"""
+    """GET '/'"""
 
     def test_response_code(self):
         """Should have an HTTP response code of 200."""

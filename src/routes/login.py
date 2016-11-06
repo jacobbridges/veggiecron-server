@@ -6,32 +6,37 @@ Login "/login" route for all HTTP methods.
 
 import hashlib
 
-from tornado.web import HTTPError
+from tornado.web import HTTPError, MissingArgumentError
 
 from ._base import BasePageHandler
+from .register import RegisterPageHandler
 
 
 class LoginPageHandler(BasePageHandler):
     """Page handler for login ('/login') route."""
 
+    get_description = 'Send a POST request to this endpoint with "username" and "password" ' \
+                      'arguments to retrieve an auth token.'
+
+    post_args = RegisterPageHandler.post_args
+
     def get(self):
         self.write({
             'id': 'success',
-            'description': 'Send a POST request to this endpoint with a "username" and "password"'
-                           'arguments to retrieve an auth token.',
-            'data': {}
+            'description': self.get_description,
+            'data': self.post_args
         })
 
     async def post(self):
         # Check all post arguments were supplied
         username = self.get_argument('username', None)
         password = self.get_argument('password', None)
-        if any([username is None, password is None]):
-            raise HTTPError(400, 'Both username and password are required to retrieve a token.')
-
-        # Check that the username is an alphanumeric string
-        if not str.isalnum(username):
-            raise HTTPError(400, 'Username must be an alphanumeric string.')
+        if all([username is None, password is None]):
+            raise MissingArgumentError('Username and Password')
+        if username is None:
+            raise MissingArgumentError('Username')
+        if password is None:
+            raise MissingArgumentError('Password')
 
         # Search for a user with the given username
         user = await self.db.execute("SELECT * FROM user WHERE username = ?", username)

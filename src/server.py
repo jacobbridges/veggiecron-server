@@ -99,6 +99,8 @@ class ServerApp(TornadoApplication):
 
     async def validate_auth_token(self, token_base64):
         """Parse an auth token and return the user database id."""
+        if token_base64 is None:
+            raise HTTPError(401, 'Auth token required to access this resource.')
         try:
             token, username = base64.b64decode(token_base64).decode("utf-8").split(':')
             user = await self.db.execute('SELECT * FROM user WHERE username = ? AND token = ?;',

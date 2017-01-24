@@ -49,8 +49,8 @@ class HTTPJobRunner(AbstractJobRunner):
             await asyncio.sleep(delay)
 
         # "Queue up" x HTTP requests, where x is the job's "number_of_clones"
-        job_future = asyncio.gather(*[self.handle_request(job)
-                                      for _ in range(job.data['number_of_clones'])])
+        num_clones = job.data['number_of_clones'] or 1
+        job_future = asyncio.gather(*[self.handle_request(job) for _ in range(num_clones)])
 
         # Create an async function for running the job with shadows disabled
         async def run_with_shadows():

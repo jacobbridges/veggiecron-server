@@ -22,9 +22,9 @@ class JobPageHandler(BasePageHandler):
         if job_name is None:
 
             # Get all jobs for user
-            jobs = await self.db.execute("SELECT * FROM job WHERE user_id = ?;", user_id)
-            job_types = await self.db.execute("SELECT id, name FROM job_type;")
-            job_types = {k: v for k, v in job_types}
+            jobs = await self.db.execute("SELECT j.*, jt.name FROM job j "
+                                         "JOIN job_type jt ON j.type_id = jt.id "
+                                         "WHERE user_id = ?;", user_id)
             return self.write({
                 'id': 'success',
                 'description': 'List all jobs for the given user.',
@@ -32,7 +32,7 @@ class JobPageHandler(BasePageHandler):
                     'jobs': [
                         {
                             'name': j[2],
-                            'type': job_types[j[3]],
+                            'type': j[10],
                             'data': j[4],
                             'schedule': j[5],
                             'last_ran': j[7],
@@ -45,15 +45,15 @@ class JobPageHandler(BasePageHandler):
         else:
 
             # Get the job by name
-            job = await self.db.execute("SELECT * FROM job WHERE user_id = ? AND name = ?",
+            job = await self.db.execute("SELECT j.*, jt.name as type FROM job j "
+                                        "JOIN job_type jt ON j.type_id = jt.id "
+                                        "WHERE j.user_id = ? AND j.name = ?",
                                         user_id, job_name)
             if len(job) == 0:
                 raise HTTPError(404, 'Job "{}" does not exist for the current user.'
                                 .format(job_name))
 
             job = job[0]
-            job_types = await self.db.execute("SELECT id, name FROM job_type;")
-            job_types = {k: v for k, v in job_types}
             job_results = await self.db.execute("SELECT id, result, date_created FROM job_result "
                                                 "WHERE job_id = ? ORDER BY id DESC LIMIT 25",
                                                 job[0])
@@ -64,7 +64,7 @@ class JobPageHandler(BasePageHandler):
                 'data': {
                     'job': {
                         'name': job_name,
-                        'type': job_types[job[3]],
+                        'type': job[10],
                         'data': job[4],
                         'schedule': job[5],
                         'last_ran': job[7],

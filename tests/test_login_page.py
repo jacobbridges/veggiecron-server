@@ -170,5 +170,3 @@ class TestPostLoginPage(MyServerTestCase):
 
         # Assert the HTTP response code is 200
         self.assertEqual(response.code, 200)
-
-

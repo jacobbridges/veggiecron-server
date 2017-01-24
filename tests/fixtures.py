@@ -3,18 +3,17 @@ tests/fixtures/py
 
 Common fixtures shared among tests are stored here.
 """
+import json
 
 from unittest import mock
 
 
-def create_db_fixture():
-    """Return a mocked src.database.DB object."""
-    return mock.MagicMock()
+####################################################################################################
+# Fixture Functions
 
-
-def create_job_scheduler_fixture():
-    """Return a mocked src.scheduler.JobScheduler object."""
-    return mock.MagicMock()
+def create_fixture_func(*return_values):
+    """Return a fixture function with different return values for each call."""
+    return mock.MagicMock(side_effects=return_values)
 
 
 def create_config_parser_fixture():
@@ -36,3 +35,48 @@ def create_hashlib_fixture(return_value=None):
     deep_fixture.hexdigest = lambda: return_value
     fixture.sha256 = mock.MagicMock(return_value=deep_fixture)
     return fixture
+
+
+####################################################################################################
+# Fixture Variables
+
+db_response_jobs_with_type = [
+    (
+        1,
+        1,
+        'job_1',
+        1,
+        json.dumps({"url": "http://requestb.in/1015j8y1",
+                    "number_of_clones": 0,
+                    "enable_shadows": True,
+                    "verb": "GET"}),
+        'every 10 seconds',
+        0,
+        '1485218461.30805',
+        '1485218461.30805',
+        '1485218461.30805',
+        'http'
+    ),
+    (
+        2,
+        1,
+        'job_2',
+        1,
+        json.dumps({"url": "http://requestb.in/1015j8y1",
+                    "number_of_clones": 0,
+                    "enable_shadows": True,
+                    "verb": "GET"}),
+        'every 2 minutes',
+        0,
+        '1485218461.30805',
+        '1485218461.30805',
+        '1485218461.30805',
+        'http'
+    ),
+]
+
+db_response_job_results = [
+    (1, '{"code": 200, "body": "ok"}', '1485236321.08443'),
+    (2, '{"code": 200, "body": "ok"}', '1485236331.09924'),
+    (3, '{"code": 200, "body": "ok"}', '1485236405.69861'),
+]

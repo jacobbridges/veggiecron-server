@@ -80,3 +80,42 @@ db_response_job_results = [
     (2, '{"code": 200, "body": "ok"}', '1485236331.09924'),
     (3, '{"code": 200, "body": "ok"}', '1485236405.69861'),
 ]
+
+db_response_job_type = [
+    (1, 'http', '{"url":{"type":"string","description":"URL prepended with \'http://\'."},"number_'
+                'of_clones":{"type":"number","description":"Don\'t just make the request one time '
+                'on every interval. Do it X number of times."},"verb":{"type":"string",'
+                '"description":"HTTP verbs: [GET, POST, PUT, DELETE]"},"enable_shadows":{"type":'
+                '"boolean","description":"Turn on shadows if you want this job to run again even '
+                'if the last run is still active. (For long running requests.)"}}'),
+]
+
+db_response_job = [
+    (
+        1,
+        1,
+        'job_1',
+        1,
+        json.dumps({"url": "http://requestb.in/1015j8y1",
+                    "number_of_clones": 0,
+                    "enable_shadows": True,
+                    "verb": "GET"}),
+        'every 10 seconds',
+        0,
+        '1485218461.30805',
+        '1485218461.30805',
+        '1485218461.30805',
+    )
+]
+
+request_create_job_params = {
+    'name': 'job_1',
+    'type': 'http',
+    'data': json.dumps({
+        'url': 'http://requestb.in/1015j8y1',
+        'number_of_clones': 0,
+        'enable_shadows': True,
+        'verb': 'GET'
+    }),
+    'schedule': 'every minute'
+}

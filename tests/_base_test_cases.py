@@ -50,6 +50,22 @@ class MyServerTestCase(tornado.testing.AsyncHTTPTestCase):
         # Return the stub so checks can be made (like stub.assert_called_once)
         return stub
 
+    def stub_scheduler_queue_put(self, *return_values):
+        """Convenience method for stubbing application.scheduler.work_queue.put."""
+
+        # Create a mocked function with the passed return values
+        stub = MagicMock(side_effect=return_values)
+
+        # Create a co-routine proxy for the stub
+        async def proxy(*args, **kwargs):
+            return stub(*args, **kwargs)
+
+        # Assign the stub to the server app instance
+        self._app.scheduler.work_queue.put = proxy
+
+        # Return the stub so checks can be made (like stub.assert_called_once)
+        return stub
+
     def get_new_ioloop(self):
         """Overwrite the base IOLoop with the asyncio loop."""
         return tornado.platform.asyncio.AsyncIOLoop.instance()

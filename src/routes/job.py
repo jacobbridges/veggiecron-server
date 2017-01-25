@@ -90,9 +90,9 @@ class JobPageHandler(BasePageHandler):
                                  '"schedule"')
 
         # Create a job from the post data
-        job_type_id = await self.db.execute("SELECT * FROM job_type WHERE name = ?", job_type)
-        if job_type_id:
-            job_type_id = job_type_id[0][0]
+        job_type_record = await self.db.execute("SELECT * FROM job_type WHERE name = ?", job_type)
+        if job_type_record:
+            job_type_id = job_type_record[0][0]
             time_now = now().timestamp()
             await self.db.execute('INSERT INTO job (id, user_id, name, type_id, data, schedule, '
                                   'date_created, date_updated) VALUES (NULL, ?, ?, ?, ?, ?, ?, ?);',
@@ -112,7 +112,6 @@ class JobPageHandler(BasePageHandler):
                     'data': job_data,
                     'schedule': job_schedule,
                     'date_created': time_now,
-                    'date_updated': time_now,
                 }
             })
         else:

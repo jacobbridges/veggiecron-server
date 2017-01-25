@@ -12,7 +12,7 @@ import sqlite3
 
 from concurrent.futures import ThreadPoolExecutor
 
-from ..utils.dates import now, utc_to_date, compare_utc_dates
+from ..utils.dates import now_as_utc, utc_to_date, compare_utc_dates
 
 
 class DB(object):
@@ -28,8 +28,6 @@ class DB(object):
 
     def register_functions(self):
         """Register some utility functions to the database."""
-        def now_as_utc():
-            return now(as_utc=True)
         self.db.create_function('now_as_utc', 0, now_as_utc)
         self.db.create_function('utc_to_date', 1, utc_to_date)
         self.db.create_function('compare_utc_dates', 3, compare_utc_dates)

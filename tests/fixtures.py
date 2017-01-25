@@ -37,6 +37,24 @@ def create_hashlib_fixture(return_value=None):
     return fixture
 
 
+def create_sqlite3_cursor(*return_values):
+    """Return a mocked sqlite3 db cursor."""
+    fixture = mock.MagicMock()
+    fixture.execute = mock.MagicMock()
+    fixture.executescript = mock.MagicMock()
+    fixture.fetchall = mock.MagicMock(side_effects=return_values)
+    return fixture
+
+
+def create_sqlite3_db(cursor):
+    """Return a mocked db object returned from sqlite3.connect."""
+    fixture = mock.MagicMock()
+    fixture.cursor = mock.MagicMock(return_value=cursor)
+    fixture.create_function = mock.MagicMock()
+    fixture.commit = mock.MagicMock()
+    return fixture
+
+
 ####################################################################################################
 # Fixture Variables
 

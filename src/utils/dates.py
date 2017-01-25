@@ -18,6 +18,11 @@ def now(as_utc=False):
         return datetime.now(tz=pytz.timezone('US/Central'))
 
 
+def now_as_utc():
+    """Get the current time with correct timezone in UTC format."""
+    return now(as_utc=True)
+
+
 def utc_to_date(utc: float):
     """Translate a UTC number to a Python datetime."""
     return datetime.fromtimestamp(utc, tz=pytz.timezone('US/Central'))

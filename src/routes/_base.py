@@ -14,7 +14,6 @@ class BasePageHandler(RequestHandler):
 
     def data_received(self, chunk):
         """Implement this method to handle streamed request data."""
-        pass
 
     @property
     def db(self):

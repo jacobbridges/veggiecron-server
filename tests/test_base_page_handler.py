@@ -15,12 +15,6 @@ from src.routes._base import BasePageHandler
 class TestBasePageHandler(object):
     """Base page handler"""
 
-    def test_data_received_not_implemented(self):
-        """Should return nothing when streaming response. (Not implemented, overwrite later)"""
-        base_page_handler = BasePageHandler(MagicMock(), MagicMock())
-        assert base_page_handler.data_received(None) is None
-        assert base_page_handler.data_received('some data') is None
-
     def test_property_db_gets_application_db(self):
         """Should give the application db property on its db property."""
         app_stub = MagicMock()

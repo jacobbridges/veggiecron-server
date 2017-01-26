@@ -28,7 +28,7 @@ class BasePageHandler(RequestHandler):
         return await self.application.db.cursor()
 
     async def validate_auth_token(self, token_base64):
-        return self.application.validate_auth_token(token_base64)
+        return await self.application.validate_auth_token(token_base64)
 
     async def generate_auth_token(self, user_id):
-        return self.application.generate_auth_token(user_id)
+        return await self.application.generate_auth_token(user_id)

@@ -52,34 +52,26 @@ class HTTPJobRunner(AbstractJobRunner):
         num_clones = job.data['number_of_clones'] or 1
         job_future = asyncio.gather(*[self.handle_request(job) for _ in range(num_clones)])
 
-        # Create an async function for running the job with shadows disabled
-        async def run_with_shadows():
-            asyncio.ensure_future(job_future)
-            job.last_ran = now(as_utc=True)
-            await self.db.execute('UPDATE job SET last_ran = ? WHERE id = ?', job.last_ran, job.id)
-            if job.run_once is False:
-                await self.scheduler_queue.put(job)
-            else:
-                asyncio.ensure_future(self.db.execute('UPDATE job SET done = 1 WHERE id = ?',
-                                                      job.id))
-
-        # Create an async function for running the job with shadows enabled
-        async def run_without_shadows():
-            await job_future
-            job.last_ran = now(as_utc=True)
-            await self.db.execute('UPDATE job SET last_ran = ? WHERE id = ?', job.last_ran, job.id)
-            if job.run_once is False:
-                await self.scheduler_queue.put(job)
-            else:
-                asyncio.ensure_future(self.db.execute('UPDATE job SET done = 1 WHERE id = ?',
-                                                      job.id))
-
-        # Run the job and depending on the "enable_shadows" option either queue the job right away
-        # or after the job finishes running
+        # If shadows are enabled, add the queued requests as a Task to the event loop
         if job.data['enable_shadows'] is True:
-            asyncio.ensure_future(run_with_shadows())
+            asyncio.ensure_future(job_future)
+        # Else if shadows are disabled, wait for the requests to finish before executing rest of
+        # the function
         else:
-            asyncio.ensure_future(run_without_shadows())
+            await job_future
+
+        # Set the job's last run time to now and persist changes to the database
+        job.last_ran = now(as_utc=True)
+        await self.db.execute('UPDATE job SET last_ran = ? WHERE id = ?', job.last_ran, job.id)
+
+        # If the job should repeat, schedule it
+        if job.run_once is False:
+            await self.scheduler_queue.put(job)
+        # Else if the job should only run once, set the job to done and persist changes to datbase
+        else:
+            job.done = 1
+            asyncio.ensure_future(self.db.execute('UPDATE job SET done = 1 WHERE id = ?',
+                                                  job.id))
 
     async def handle_request(self, job):
         try:

@@ -193,3 +193,142 @@ class TestHttpJobRunner(object):
 
         # Assert that the http requests were ensured
         assert call(gather_response) in ensure_future_stub.call_args_list
+
+    @pytest.mark.asyncio
+    async def test_shadow_disabled_on_run(self, monkeypatch, httpjobrunner, job):
+        """Should await HTTP requests when shadows are disabled on run()"""
+        # Stub all external and internal methods that are not being tested
+        monkeypatch.setattr('src.scheduler.job_runners.http.AsyncHTTPClient', MagicMock())
+        monkeypatch.setattr('src.scheduler.job_runners.http.HTTPJobRunner.handle_request',
+                            MagicMock())
+        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.ensure_future', MagicMock())
+
+        # Stub asyncio.gather function, so I can check later that the requests were awaited
+        gather_stub = MagicMock()
+        gather_coro = asyncio.coroutine(gather_stub)
+        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.gather', gather_coro)
+
+        # Stub the database and scheduler_queue as mocks inside coroutines
+        db_stub = MagicMock()
+        db_stub.execute = asyncio.coroutine(MagicMock())
+        scheduler_queue_stub = MagicMock()
+        put_coro = asyncio.coroutine(MagicMock())
+        scheduler_queue_stub.put = put_coro
+
+        # Prepare the job runner class
+        httpjobrunner.load_class(db_stub, scheduler_queue_stub)
+        runner = httpjobrunner()
+
+        # Run the job with some fake data
+        job.data['enable_shadows'] = False
+        await runner.run(job, 0)
+
+        # Assert that the http requests were awaited
+        gather_stub.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_job_last_ran_field_updated_on_run(self, monkeypatch, httpjobrunner, job):
+        """Should update job's "last_ran" field on run()."""
+        # Stub all external and internal methods that are not being tested
+        monkeypatch.setattr('src.scheduler.job_runners.http.AsyncHTTPClient', MagicMock())
+        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.ensure_future', MagicMock())
+        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.gather',
+                            asyncio.coroutine(MagicMock()))
+        monkeypatch.setattr('src.scheduler.job_runners.http.HTTPJobRunner.handle_request',
+                            MagicMock())
+
+        # Stub the now function so I can test that it was called
+        now_time = 'time right now'
+        now_stub = MagicMock(return_value=now_time)
+        monkeypatch.setattr('src.scheduler.job_runners.http.now', now_stub)
+
+        # Stub the database and scheduler_queue as mocks inside coroutines
+        db_stub = MagicMock()
+        execute_stub = MagicMock()
+        db_stub.execute = asyncio.coroutine(execute_stub)
+        scheduler_queue_stub = MagicMock()
+        put_coro = asyncio.coroutine(MagicMock())
+        scheduler_queue_stub.put = put_coro
+
+        # Prepare the job runner class
+        httpjobrunner.load_class(db_stub, scheduler_queue_stub)
+        runner = httpjobrunner()
+
+        # Run the job with some fake data
+        await runner.run(job, 0)
+
+        # Assert the job's last_ran field is set the the response from now()
+        assert now_time is job.last_ran
+        # Assert the job's updated "last_ran" field is persisted to the database
+        assert (call('UPDATE job SET last_ran = ? WHERE id = ?', job.last_ran, job.id)
+                in execute_stub.call_args_list)
+
+    @pytest.mark.asyncio
+    async def test_job_is_rescheduled_on_run(self, monkeypatch, httpjobrunner, job):
+        """Should reschedule the job if run_once field is False on run()."""
+        # Stub all external and internal methods that are not being tested
+        monkeypatch.setattr('src.scheduler.job_runners.http.AsyncHTTPClient', MagicMock())
+        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.gather',
+                            asyncio.coroutine(MagicMock()))
+        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.ensure_future', MagicMock())
+        monkeypatch.setattr('src.scheduler.job_runners.http.HTTPJobRunner.handle_request',
+                            MagicMock())
+
+        # Stub the database and scheduler_queue as mocks inside coroutines
+        db_stub = MagicMock()
+        db_stub.execute = asyncio.coroutine(MagicMock())
+        scheduler_queue_stub = MagicMock()
+        put_stub = MagicMock()
+        put_coro = asyncio.coroutine(put_stub)
+        scheduler_queue_stub.put = put_coro
+
+        # Prepare the job runner class
+        httpjobrunner.load_class(db_stub, scheduler_queue_stub)
+        runner = httpjobrunner()
+
+        # Run the job with some fake data
+        job.run_once = False
+        await runner.run(job, 0)
+
+        # Assert the job was sent to the queue for rescheduling
+        put_stub.assert_called_once_with(job)
+
+    @pytest.mark.asyncio
+    async def test_job_is_set_to_done_on_run(self, monkeypatch, httpjobrunner, job):
+        """Should set the job to done if run_once field is True and persist on run()."""
+        # Stub all external and internal methods that are not being tested
+        monkeypatch.setattr('src.scheduler.job_runners.http.AsyncHTTPClient', MagicMock())
+        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.gather',
+                            asyncio.coroutine(MagicMock()))
+        monkeypatch.setattr('src.scheduler.job_runners.http.HTTPJobRunner.handle_request',
+                            MagicMock())
+
+        # Stub "ensure_future" so I can test that it was called for the database persistence
+        ensure_future_stub = MagicMock()
+        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.ensure_future',
+                            ensure_future_stub)
+
+        # Stub the database and scheduler_queue as mocks inside coroutines
+        db_stub = MagicMock()
+        execute_stub = MagicMock()
+        execute_coro = asyncio.coroutine(execute_stub)
+        db_stub.execute = execute_coro
+        scheduler_queue_stub = MagicMock()
+        put_coro = asyncio.coroutine(MagicMock())
+        scheduler_queue_stub.put = put_coro
+
+        # Prepare the job runner class
+        httpjobrunner.load_class(db_stub, scheduler_queue_stub)
+        runner = httpjobrunner()
+
+        # Run the job with some fake data
+        job.run_once = True
+        await runner.run(job, 0)
+
+        # Assert the job's "done" field has been set to 1
+        assert job.done is 1
+        # Assert the job's updated "done" field was ensured to be persisted to the database
+        # NOTE: I could not assert "ensure_future" was called with the stubbed execute coroutine,
+        # because a new coroutine is created on every execution and db.execute is called multiple
+        # times in run(). There are no async MagicMocks, so for now this is the best I can do.
+        assert ensure_future_stub.call_count is 1

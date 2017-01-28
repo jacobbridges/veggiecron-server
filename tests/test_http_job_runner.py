@@ -6,7 +6,7 @@ Test the the job runner which handles all http jobs.
 import asyncio
 import pytest
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 
 @pytest.fixture
@@ -62,24 +62,30 @@ class TestHttpJobRunner(object):
         assert httpjobrunner().load() is None
 
     @pytest.mark.asyncio
-    async def test_delay_on_run(self, monkeypatch, httpjobrunner, job):
+    async def test_delay_on_run(self, monkeypatch, httpjobrunner, job, event_loop):
         """Should delay the execution of run() if delay parameter is greater than zero."""
         # Stub all external and internal methods that are not being tested
         monkeypatch.setattr('src.scheduler.job_runners.http.AsyncHTTPClient', MagicMock())
-        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.gather', MagicMock())
+        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.gather',
+                            asyncio.coroutine(MagicMock()))
         monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.ensure_future', MagicMock())
         monkeypatch.setattr('src.scheduler.job_runners.http.HTTPJobRunner.handle_request',
                             MagicMock())
 
-        # Stub the sleep coroutine with a mock that returns a future
+        # Stub the sleep coroutine
         sleep_stub = MagicMock()
-        sleep_future = asyncio.Future()
-        sleep_future.set_result(None)
-        sleep_stub.return_value = sleep_future
-        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.sleep', sleep_stub)
+        sleep_coro = asyncio.coroutine(sleep_stub)
+        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.sleep', sleep_coro)
 
-        # Prepare the job runner
-        httpjobrunner.load_class(MagicMock(), MagicMock())
+        # Stub the database and scheduler_queue as mocks inside coroutines
+        db_stub = MagicMock()
+        db_stub.execute = asyncio.coroutine(MagicMock())
+        scheduler_queue_stub = MagicMock()
+        put_coro = asyncio.coroutine(MagicMock())
+        scheduler_queue_stub.put = put_coro
+
+        # Prepare the job runner class
+        httpjobrunner.load_class(db_stub, scheduler_queue_stub)
         runner = httpjobrunner()
 
         # Run the job with some fake data, but be sure the delay is above 0
@@ -88,8 +94,6 @@ class TestHttpJobRunner(object):
 
         # Assert that asyncio.sleep was called with the delay
         sleep_stub.assert_called_once_with(delay)
-        # Assert that sleep was awaited properly (the future finished)
-        assert sleep_future.done() is True
 
     @pytest.mark.asyncio
     async def test_make_requests_for_num_of_clones_on_run(self, monkeypatch, httpjobrunner, job):
@@ -97,30 +101,95 @@ class TestHttpJobRunner(object):
         # Stub all external and internal methods that are not being tested
         monkeypatch.setattr('src.scheduler.job_runners.http.AsyncHTTPClient', MagicMock())
         monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.ensure_future', MagicMock())
+        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.gather',
+                            asyncio.coroutine(MagicMock()))
+
+        # Stub the method which handles http requests
+        handle_request_stub = MagicMock()
+        monkeypatch.setattr('src.scheduler.job_runners.http.HTTPJobRunner.handle_request',
+                            handle_request_stub)
+
+        # Stub the database and scheduler_queue as mocks inside coroutines
+        db_stub = MagicMock()
+        db_stub.execute = asyncio.coroutine(MagicMock())
+        scheduler_queue_stub = MagicMock()
+        put_coro = asyncio.coroutine(MagicMock())
+        scheduler_queue_stub.put = put_coro
+
+        # Prepare the job runner class
+        httpjobrunner.load_class(db_stub, scheduler_queue_stub)
+        runner = httpjobrunner()
+
+        # Run the job with some fake data
+        number_of_clones = 4
+        job.data['number_of_clones'] = number_of_clones
+        await runner.run(job, 0)
+
+        # Assert that asyncio.gather was called with
+        assert handle_request_stub.call_count is number_of_clones
+
+    @pytest.mark.asyncio
+    async def test_make_at_least_one_request_on_run(self, monkeypatch, httpjobrunner, job):
+        """Should "queue up" at least one HTTP request on run()"""
+        # Stub all external and internal methods that are not being tested
+        monkeypatch.setattr('src.scheduler.job_runners.http.AsyncHTTPClient', MagicMock())
+        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.ensure_future', MagicMock())
+        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.gather',
+                            asyncio.coroutine(MagicMock()))
+
+        # Stub the method which handles http requests
+        handle_request_stub = MagicMock()
+        monkeypatch.setattr('src.scheduler.job_runners.http.HTTPJobRunner.handle_request',
+                            handle_request_stub)
+
+        # Stub the database and scheduler_queue as mocks inside coroutines
+        db_stub = MagicMock()
+        db_stub.execute = asyncio.coroutine(MagicMock())
+        scheduler_queue_stub = MagicMock()
+        put_coro = asyncio.coroutine(MagicMock())
+        scheduler_queue_stub.put = put_coro
+
+        # Prepare the job runner class
+        httpjobrunner.load_class(db_stub, scheduler_queue_stub)
+        runner = httpjobrunner()
+
+        # Run the job with some fake data
+        job.data['number_of_clones'] = 0
+        await runner.run(job, 0)
+
+        # Assert the job.handle_request method was called at least once
+        assert handle_request_stub.call_count is 1
+
+    @pytest.mark.asyncio
+    async def test_shadow_enabled_on_run(self, monkeypatch, httpjobrunner, job):
+        """Should ensure HTTP requests when shadows are enabled on run()"""
+        # Stub all external and internal methods that are not being tested
+        monkeypatch.setattr('src.scheduler.job_runners.http.AsyncHTTPClient', MagicMock())
         monkeypatch.setattr('src.scheduler.job_runners.http.HTTPJobRunner.handle_request',
                             MagicMock())
 
-        # Stub asyncio.gather so I can test that it was called with a number of requests
-        gather_stub = MagicMock()
-        gather_future = asyncio.Future()
-        gather_future.set_result(None)
-        gather_stub.return_value = gather_future
-        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.gather', gather_stub)
+        # Stub ensure_future function, so I can check later that the requests were ensured
+        gather_response = 'fake data!'
+        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.gather',
+                            MagicMock(return_value=gather_response))
+        ensure_future_stub = MagicMock()
+        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.ensure_future',
+                            ensure_future_stub)
 
-        # Set the job's number of clones to test
-        number_of_clones = 10
-        job.data['number_of_clones'] = number_of_clones
+        # Stub the database and scheduler_queue as mocks inside coroutines
+        db_stub = MagicMock()
+        db_stub.execute = asyncio.coroutine(MagicMock())
+        scheduler_queue_stub = MagicMock()
+        put_coro = asyncio.coroutine(MagicMock())
+        scheduler_queue_stub.put = put_coro
 
-        # Prepare the job runner
-        httpjobrunner.load_class(MagicMock(), MagicMock())
+        # Prepare the job runner class
+        httpjobrunner.load_class(db_stub, scheduler_queue_stub)
         runner = httpjobrunner()
 
-        # Run the job with some fake data, but use job with prepared number of clones
+        # Run the job with some fake data
+        job.data['enable_shadows'] = True
         await runner.run(job, 0)
 
-        # Assert that asyncio.gather was called with 10 calls to runner.handle_request
-        gather_stub.assert_called_once_with(*[runner.handle_request(job)
-                                              for _ in range(number_of_clones)])
-
-        # The code which actually awaits the future is stubbed, so I have to cancel the future
-        gather_future.cancel()
+        # Assert that the http requests were ensured
+        assert call(gather_response) in ensure_future_stub.call_args_list

@@ -67,11 +67,10 @@ class HTTPJobRunner(AbstractJobRunner):
         # If the job should repeat, schedule it
         if job.run_once is False:
             await self.scheduler_queue.put(job)
-        # Else if the job should only run once, set the job to done and persist changes to datbase
+        # Else if the job should only run once, set the job to done and persist changes to database
         else:
             job.done = 1
-            asyncio.ensure_future(self.db.execute('UPDATE job SET done = 1 WHERE id = ?',
-                                                  job.id))
+            asyncio.ensure_future(self.db.execute('UPDATE job SET done = 1 WHERE id = ?', job.id))
 
     async def handle_request(self, job):
         try:

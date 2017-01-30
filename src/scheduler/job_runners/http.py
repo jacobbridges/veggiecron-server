@@ -74,8 +74,8 @@ class HTTPJobRunner(AbstractJobRunner):
 
     async def handle_request(self, job):
         try:
-            response = await to_asyncio_future(self.http_client.fetch(job.data['url'],
-                                                                      method=job.data['verb']))
+            response = await to_asyncio_future(
+                self.http_client.fetch(job.data['url'], method=job.data['verb']))
             result = json.dumps({'code': response.code, 'body': response.body.decode('utf8')})
             asyncio.ensure_future(self.persist_job_run(job, result))
         except Exception as e:

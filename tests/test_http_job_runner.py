@@ -22,7 +22,12 @@ def job():
     obj.user_id = 1
     obj.name = 'job1'
     obj.type_id = 1
-    obj.data = {'number_of_clones': 1, 'enable_shadows': False}
+    obj.data = {
+        'number_of_clones': 1,
+        'enable_shadows': False,
+        'url': 'http://httpbin.org',
+        'verb': 'GET',
+    }
     obj.schedule = 'every minute'
     obj.done = 0
     obj.last_ran = None
@@ -332,3 +337,108 @@ class TestHttpJobRunner(object):
         # because a new coroutine is created on every execution and db.execute is called multiple
         # times in run(). There are no async MagicMocks, so for now this is the best I can do.
         assert ensure_future_stub.call_count is 1
+
+    @pytest.mark.asyncio
+    async def test_send_http_request_on_handle_request(self, monkeypatch, httpjobrunner, job):
+        """Should make an HTTP request to the job url on handle_request()"""
+        # Stub all external and internal methods that are not being tested
+        monkeypatch.setattr('src.scheduler.job_runners.http.to_asyncio_future',
+                            asyncio.coroutine(MagicMock()))
+        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.ensure_future', MagicMock())
+        monkeypatch.setattr('src.scheduler.job_runners.http.json.dumps', MagicMock())
+        monkeypatch.setattr('src.scheduler.job_runners.http.HTTPJobRunner.persist_job_run',
+                            MagicMock())
+
+        # Stub external function which makes HTTP requests
+        client_stub = MagicMock()
+        monkeypatch.setattr('src.scheduler.job_runners.http.AsyncHTTPClient',
+                            MagicMock(return_value=client_stub))
+
+        # Stub the database and scheduler_queue as mocks inside coroutines
+        db_stub = MagicMock()
+        db_stub.execute = asyncio.coroutine(MagicMock())
+        scheduler_queue_stub = MagicMock()
+        put_stub = MagicMock()
+        put_coro = asyncio.coroutine(put_stub)
+        scheduler_queue_stub.put = put_coro
+
+        # Prepare the job runner class
+        httpjobrunner.load_class(db_stub, scheduler_queue_stub)
+        runner = httpjobrunner()
+
+        # Handle a request with the HTTP job runner
+        await runner.handle_request(job)
+
+        # Assert http client.fetch() was called to make a request
+        client_stub.fetch.assert_called_once_with(job.data['url'], method=job.data['verb'])
+
+    @pytest.mark.asyncio
+    async def test_persist_error_on_handle_request(self, monkeypatch, httpjobrunner, job):
+        """Should persist any errors that occur while making the HTTP request on handle_request()"""
+        # Stub all external and internal methods that are not being tested
+        monkeypatch.setattr('src.scheduler.job_runners.http.to_asyncio_future',
+                            asyncio.coroutine(MagicMock()))
+        monkeypatch.setattr('src.scheduler.job_runners.http.asyncio.ensure_future', MagicMock())
+
+        # Stub the function that dumps data to json
+        json_stub = MagicMock()
+        monkeypatch.setattr('src.scheduler.job_runners.http.json.dumps', json_stub)
+
+        # Stub the function that persist the job runs
+        persist_stub = MagicMock()
+        monkeypatch.setattr('src.scheduler.job_runners.http.HTTPJobRunner.persist_job_run',
+                            persist_stub)
+
+        # Stub external function which makes HTTP requests
+        client_stub = MagicMock()
+        monkeypatch.setattr('src.scheduler.job_runners.http.AsyncHTTPClient',
+                            MagicMock(return_value=client_stub))
+        client_stub.fetch.side_effect = Exception('I am error.')
+
+        # Stub the database and scheduler_queue as mocks inside coroutines
+        db_stub = MagicMock()
+        db_stub.execute = asyncio.coroutine(MagicMock())
+        scheduler_queue_stub = MagicMock()
+        put_stub = MagicMock()
+        put_coro = asyncio.coroutine(put_stub)
+        scheduler_queue_stub.put = put_coro
+
+        # Prepare the job runner class
+        httpjobrunner.load_class(db_stub, scheduler_queue_stub)
+        runner = httpjobrunner()
+
+        # Handle a request with the HTTP job runner
+        await runner.handle_request(job)
+
+        # Assert http client.fetch() was called to make a request
+        json_stub.assert_called_once_with({'code': 0, 'body': 'I am error.'})
+        persist_stub.assert_called_once_with(job, json_stub({'code': 0, 'body': 'I am error.'}))
+
+    @pytest.mark.asyncio
+    async def test_save_to_database_on_persist_job_run(self, monkeypatch, httpjobrunner, job):
+        """Should insert job runs into the database on persist_job_run()"""
+
+        # Stub the "now" function which returns the current time
+        now_stub = MagicMock()
+        monkeypatch.setattr('src.scheduler.job_runners.http.now', now_stub)
+
+        # Stub the database and scheduler_queue as mocks inside coroutines
+        db_stub = MagicMock()
+        execute_stub = MagicMock()
+        db_stub.execute = asyncio.coroutine(execute_stub)
+        scheduler_queue_stub = MagicMock()
+        put_stub = MagicMock()
+        put_coro = asyncio.coroutine(put_stub)
+        scheduler_queue_stub.put = put_coro
+
+        # Prepare the job runner class
+        httpjobrunner.load_class(db_stub, scheduler_queue_stub)
+        runner = httpjobrunner()
+
+        # Handle a request with the HTTP job runner
+        await runner.persist_job_run(job, 'job run result')
+
+        # Assert the db.execute function was called
+        execute_stub.assert_called_once_with(
+            'INSERT INTO job_result (job_id, result, date_created) VALUES (?, ?, ?)', job.id,
+            'job run result', now_stub(as_utc=True))
